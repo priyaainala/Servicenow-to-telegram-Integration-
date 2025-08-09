@@ -1,0 +1,51 @@
+#after insert or update
+(function executeRule(current, previous) {
+    if (!current) {
+        gs.error("Business Rule triggered but current record is null or undefined");
+        return;
+    }
+
+    var botToken = 'Token';  // Your Bot Token
+    var chatId = 'ID';  // Your Telegram group chat ID
+
+    var assignedToName = current.assigned_to ? current.assigned_to.getDisplayValue() : "Unassigned";
+
+    var universalUrl = "https://developer.servicenow.com/";
+
+    var message = 
+        "🚨 Incident Alert\n" +
+        "Number: " + current.number + "\n" +
+        "Short Description: " + current.short_description + "\n" +
+        "State: " + current.state.getDisplayValue() + "\n" +
+        "Priority: " + current.priority.getDisplayValue() + "\n" +
+        "Assigned To: " + assignedToName + "\n" +
+        "[Open ServiceNow Developer Portal](" + universalUrl + ")";
+
+    var telegramApiUrl = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+
+    var r = new sn_ws.RESTMessageV2();
+    r.setEndpoint(telegramApiUrl);
+    r.setHttpMethod('POST');
+    r.setRequestHeader("Content-Type", "application/json");
+
+    var payload = {
+        chat_id: chatId,
+        text: message,
+        parse_mode: "Markdown"
+    };
+
+    r.setRequestBody(JSON.stringify(payload));
+
+    gs.info("Telegram API URL: " + telegramApiUrl);
+    gs.info("Payload: " + JSON.stringify(payload));
+
+    try {
+        var response = r.execute();
+        var responseBody = response.getBody();
+
+        gs.info("Telegram message sent: " + responseBody);
+        gs.info("Telegram notification sent successfully for Incident: " + current.number);
+    } catch (ex) {
+        gs.error("Error sending Telegram message: " + ex.message);
+    }
+})(current, previous);
